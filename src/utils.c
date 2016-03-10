@@ -73,7 +73,9 @@ int lodbc_issqltype (const SQLSMALLINT type) {
     case SQL_TYPE_DATE: case SQL_TYPE_TIME: case SQL_TYPE_TIMESTAMP: 
     case SQL_DATE: case SQL_INTERVAL: case SQL_TIMESTAMP: 
     case SQL_LONGVARCHAR:
+#ifdef SQL_GUID
     case SQL_GUID:
+#endif
     
     case SQL_NUMERIC: case SQL_DECIMAL: 
     case SQL_FLOAT: case SQL_REAL: case SQL_DOUBLE:
@@ -114,7 +116,9 @@ const char *lodbc_sqltypetolua (const SQLSMALLINT type) {
     case SQL_TYPE_DATE: case SQL_TYPE_TIME: case SQL_TYPE_TIMESTAMP:
     case SQL_DATE: case SQL_INTERVAL: case SQL_TIMESTAMP:
     case SQL_LONGVARCHAR:
+#ifdef SQL_GUID
     case SQL_GUID:
+#endif
       return LT_STRING;
 
     case SQL_NUMERIC: case SQL_DECIMAL: 

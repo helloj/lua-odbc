@@ -4,7 +4,7 @@
 #include "parlist.h"
 #include "l52util.h"
 
-int par_data_setparinfo(par_data* par, lua_State *L, SQLHSTMT hstmt, SQLSMALLINT i){
+int par_data_setparinfo(par_data* par, lua_State *L, SQLHSTMT hstmt, SQLSMALLINT i, SQLULEN bufsize){
 
   SQLRETURN ret = SQLDescribeParam(hstmt, i, &par->sqltype, &par->parsize, &par->digest, NULL);
   // Sybase ODBC driver 9.0.2.3951
@@ -27,6 +27,7 @@ int par_data_setparinfo(par_data* par, lua_State *L, SQLHSTMT hstmt, SQLSMALLINT
       // and what now?
     }
   }
+  par_data_settype(par, par->sqltype, par->parsize, par->digest, bufsize);
 
   return 0;
 }

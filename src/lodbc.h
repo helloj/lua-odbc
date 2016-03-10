@@ -6,7 +6,7 @@
 #include <sqlext.h>
 #elif defined(INFORMIX)
 #include "infxcli.h"
-#elif defined(UNIXODBC)
+#elif defined(UNIXODBC) || defined(DBMAKER)
 #include "sql.h"
 #include "sqltypes.h"
 #include "sqlext.h"

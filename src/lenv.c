@@ -182,6 +182,7 @@ static int env_getdatasources (lua_State *L) {
   return lodbc_fail(L, hENV, env->handle);
 }
 
+#ifndef DBMAKER
 #define MAX_DESC_LEN 256
 #define MAX_ATTR_LEN 1024
 static int env_getdrivers (lua_State *L) {
@@ -265,8 +266,8 @@ static int env_getdrivers (lua_State *L) {
 }
 #undef MAX_DESC_LEN
 #undef MAX_ATTR_LEN
-
 //}
+#endif
 
 //{ get / set attr
 
@@ -386,7 +387,9 @@ static const struct luaL_Reg lodbc_env_methods[] = {
   {"destroy",    env_destroy},
   {"destroyed",  env_closed},
 
+#ifndef DBMAKER
   {"drivers",     env_getdrivers},
+#endif
   {"datasources", env_getdatasources},
 
   {"connection",  env_connection},

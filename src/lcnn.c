@@ -2111,6 +2111,7 @@ static int cnn_getstatistics(lua_State *L){
     CONN_AFTER_CALL();
 }
 
+#ifndef DBMAKER
 static int cnn_gettableprivileges(lua_State *L){
     static const char* EMPTY_STRING=NULL;
     const char *catalog, *schema, *tableName;
@@ -2144,6 +2145,7 @@ static int cnn_getcolumnprivileges(lua_State *L){
 
   CONN_AFTER_CALL();
 }
+#endif
 
 static int cnn_getprimarykeys(lua_State *L){
     static const char* EMPTY_STRING=NULL;
@@ -2352,8 +2354,10 @@ static const struct luaL_Reg lodbc_cnn_methods[] = {
   {"catalogs"          ,  cnn_getcatalogs         },
   {"statistics"        ,  cnn_getstatistics       },
   {"columns"           ,  cnn_getcolumns          },
+#ifndef DBMAKER
   {"tableprivileges"   ,  cnn_gettableprivileges  },
   {"columnprivileges"  ,  cnn_getcolumnprivileges },
+#endif
   {"primarykeys"       ,  cnn_getprimarykeys      },
   {"indexinfo"         ,  cnn_getindexinfo        },
   {"crossreference"    ,  cnn_crossreference      },

@@ -23,7 +23,7 @@ typedef struct par_data{
   struct par_data     *next;
 } par_data;
 
-LODBC_INTERNAL int par_data_setparinfo(par_data* par, lua_State *L, SQLHSTMT hstmt, SQLSMALLINT i);
+LODBC_INTERNAL int par_data_setparinfo(par_data* par, lua_State *L, SQLHSTMT hstmt, SQLSMALLINT i, SQLULEN bufsize);
 
 /* Create params
 ** only memory allocation error

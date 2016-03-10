@@ -1039,7 +1039,9 @@ struct INT_CONST{
   ODBC_CONST( WVARCHAR                  ),
   ODBC_CONST( WLONGVARCHAR              ),
 
+#ifdef SQL_GUID
   ODBC_CONST( GUID                      ),
+#endif
 
   ODBC_CONST( DATE                      ),
   ODBC_CONST( TIME                      ),

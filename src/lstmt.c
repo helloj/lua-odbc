@@ -330,7 +330,8 @@ static int stmt_bind_number_cb_pre_(lua_State *L, lodbc_stmt *stmt, SQLUSMALLINT
   SQLRETURN ret = par_init_cb(par, L, LODBC_NUMBER);
   if(ret) return ret;
 
-  par_data_settype(par, LODBC_NUMBER, LODBC_NUMBER_SIZE, LODBC_NUMBER_DIGEST, 0);
+  par_data_setparinfo(par, L, stmt->handle, i, 0);
+  //par_data_settype(par, LODBC_NUMBER, LODBC_NUMBER_SIZE, LODBC_NUMBER_DIGEST, 0);
   return 0;
 }
 
@@ -340,7 +341,8 @@ static int stmt_bind_integer_cb_pre_(lua_State *L, lodbc_stmt *stmt, SQLUSMALLIN
   SQLRETURN ret = par_init_cb(par, L, LODBC_INTEGER);
   if(ret) return ret;
 
-  par_data_settype(par, LODBC_INTEGER, LODBC_INTEGER_SIZE, LODBC_INTEGER_DIGEST, 0);
+  par_data_setparinfo(par, L, stmt->handle, i, 0);
+  // par_data_settype(par, LODBC_INTEGER, LODBC_INTEGER_SIZE, LODBC_INTEGER_DIGEST, 0);
   return 0;
 }
 
@@ -413,14 +415,16 @@ static int stmt_bind_number_post_(lua_State *L, lodbc_stmt *stmt, SQLUSMALLINT i
 
   #ifdef LODBC_USE_INTEGER
   if(lua_isinteger(L, 3)){
-    par_data_settype(par, LODBC_INTEGER, LODBC_INTEGER_SIZE, LODBC_INTEGER_DIGEST, 0);
+    par_data_setparinfo(par, L, stmt->handle, i, 0);
+    // par_data_settype(par, LODBC_INTEGER, LODBC_INTEGER_SIZE, LODBC_INTEGER_DIGEST, 0);
     par->value.intval = lua_tointeger(L,3);
     ret = SQLBindParameter(stmt->handle, i, SQL_PARAM_INPUT, LODBC_C_INTEGER, par->sqltype, par->parsize, par->digest, &par->value.intval, 0, NULL);
   }
   else
   #endif
   {
-    par_data_settype(par,LODBC_NUMBER,LODBC_NUMBER_SIZE, LODBC_NUMBER_DIGEST, 0);
+    par_data_setparinfo(par, L, stmt->handle, i, 0);
+    // par_data_settype(par,LODBC_NUMBER,LODBC_NUMBER_SIZE, LODBC_NUMBER_DIGEST, 0);
     par->value.numval = luaL_checknumber(L,3);
     ret = SQLBindParameter(stmt->handle, i, SQL_PARAM_INPUT, LODBC_C_NUMBER, par->sqltype, par->parsize, par->digest, &par->value.numval, 0, NULL);
   }
@@ -463,7 +467,8 @@ static int stmt_bind_string_(lua_State *L, lodbc_stmt *stmt, SQLUSMALLINT i, par
   lua_tolstring(L,3,&buffer_len);
   buffer_len++;
 
-  par_data_settype(par,SQL_CHAR, 0, 0, buffer_len);
+  par_data_setparinfo(par, L, stmt->handle, i, buffer_len);
+  // par_data_settype(par,SQL_CHAR, 0, 0, buffer_len);
   if(!par->value.strval.buf)
     return LODBC_ALLOCATE_ERROR(L);
   par->ind = SQL_NTS;
@@ -482,7 +487,8 @@ static int stmt_bind_binary_(lua_State *L, lodbc_stmt *stmt, SQLUSMALLINT i, par
   if(lua_isfunction(L,3))
     return stmt_bind_binary_cb_(L,stmt,i,par);
   lua_tolstring(L,3,&buffer_len);
-  par_data_settype(par,SQL_BINARY, 0, 0, buffer_len?buffer_len:1);
+  par_data_setparinfo(par, L, stmt->handle, i, buffer_len?buffer_len:1);
+  // par_data_settype(par,SQL_BINARY, 0, 0, buffer_len?buffer_len:1);
   if(!par->value.strval.buf)
     return LODBC_ALLOCATE_ERROR(L);
   par->ind = buffer_len;
@@ -498,7 +504,8 @@ static int stmt_bind_bool_(lua_State *L, lodbc_stmt *stmt, SQLUSMALLINT i, par_d
   SQLRETURN ret;
   if(lua_isfunction(L,3))
     return stmt_bind_bool_cb_(L,stmt,i,par);
-  par_data_settype(par,SQL_BIT, 0, 0, 0);
+  par_data_setparinfo(par, L, stmt->handle, i, 0);
+  // par_data_settype(par,SQL_BIT, 0, 0, 0);
   ret = SQLBindParameter(stmt->handle, i, SQL_PARAM_INPUT, SQL_C_BIT, par->sqltype, 0, 0, &par->value.boolval, 0, NULL);
   if (lodbc_iserror(ret))
     return lodbc_fail(L, hSTMT, stmt->handle);
@@ -1303,6 +1310,24 @@ static int stmt_get_destroyonclose (lua_State *L) {
 //}
 
 /*
+** Returns the cursor's name.
+ * hj add
+*/
+static int stmt_get_cursorname (lua_State *L) {
+  SQLRETURN ret;
+  SQLCHAR name[100];
+  SQLSMALLINT len;
+
+  lodbc_stmt *stmt = lodbc_getstmt(L);
+  ret = SQLGetCursorName(stmt->handle, name, sizeof(name), &len);
+  if(lodbc_iserror(ret)){
+    return lodbc_fail(L, hSTMT, stmt->handle);
+  }
+  lua_pushstring(L, name);
+  return 1;
+}
+
+/*
 ** Returns the table with column names.
 */
 static int stmt_colnames (lua_State *L) {
@@ -1439,6 +1464,8 @@ static const struct luaL_Reg lodbc_stmt_methods[] = {
   {"setautoclose",        stmt_set_autoclose},
   {"getdestroyonclose",   stmt_get_destroyonclose},
   {"setdestroyonclose",   stmt_set_destroyonclose},
+
+  {"getcursorname",   stmt_get_cursorname},
 
   {NULL, NULL},
 };
