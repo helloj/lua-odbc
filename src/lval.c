@@ -21,6 +21,13 @@ static void *lodbc_value_at_impl (lua_State *L, const char*NAME, int i) {
   return NULL;
 }
 
+static int lodbc_value_tostring_impl(lua_State *L, void *val, const char*NAME) {
+  char self[65];
+  sprintf (self, "%p", (void *)val);
+  lua_pushfstring (L, "%sValue [%s] (%s)", LODBC_PREFIX, NAME, self);
+  return 1;
+}
+
 static int optpartype(lua_State *L, int idx){
   int par_type;
   if(LUA_TNONE == lua_type(L, idx)) return SQL_PARAM_INPUT;
@@ -152,7 +159,13 @@ static int lodbc_##T##_get_data(lua_State *L){                      \
   return 1;                                                         \
 }                                                                   \
                                                                     \
+static int lodbc_##T##_tostring(lua_State *L){                      \
+  lodbc_##T *val = lodbc_value(L, lodbc_##T);                       \
+  return lodbc_value_tostring_impl(L, val, #T);                     \
+}                                                                   \
+                                                                    \
 static const struct luaL_Reg lodbc_##T##_methods[] = {              \
+  {"__tostring", lodbc_##T##_tostring},                             \
   {"set_null",   lodbc_##T##_set_null},                             \
   {"set_default",lodbc_##T##_set_default},                          \
   {"is_null",    lodbc_##T##_is_null},                              \
@@ -248,14 +261,26 @@ static int lodbc_##T##_set(lua_State *L, lodbc_##T *val, int i, int opt){\
 #define lodbc_float_STYPE    SQL_FLOAT
 #define lodbc_double_STYPE   SQL_DOUBLE
 
+#if defined(LODBC_INT_SIZE_64)
 make_integer_T(ubigint,  SQLUBIGINT     )
 make_integer_T(sbigint,  SQLBIGINT      )
-make_integer_T(utinyint, SQLCHAR        )
-make_integer_T(stinyint, SQLSCHAR       )
-make_integer_T(ushort  , SQLUSMALLINT   )
-make_integer_T(sshort  , SQLSMALLINT    )
+#else
+make_numeric_T(ubigint,  SQLUBIGINT     )
+make_numeric_T(sbigint,  SQLBIGINT      )
+#endif
+
+#if defined(LODBC_INT_SIZE_32)
 make_integer_T(ulong   , SQLUINTEGER    )
 make_integer_T(slong   , SQLINTEGER     )
+#else
+make_numeric_T(ulong   , SQLUINTEGER    )
+make_numeric_T(slong   , SQLINTEGER     )
+#endif
+
+make_integer_T(ushort  , SQLUSMALLINT   )
+make_integer_T(sshort  , SQLSMALLINT    )
+make_integer_T(utinyint, SQLCHAR        )
+make_integer_T(stinyint, SQLSCHAR       )
 make_numeric_T(float   , SQLFLOAT       )
 make_numeric_T(double  , SQLDOUBLE      )
 
@@ -638,8 +663,13 @@ static int lodbc_char_get_data(lua_State *L){
   return 1;
 }
 
+static int lodbc_char_tostring(lua_State *L){
+  lodbc_char *val = lodbc_value(L, lodbc_char);
+  return lodbc_value_tostring_impl(L, val, "char");
+}
 
 static const struct luaL_Reg lodbc_char_methods[] = { 
+  {"__tostring", lodbc_char_tostring},
   {"set_null",   lodbc_char_set_null},
   {"set_default",lodbc_char_set_default},
   {"set",        lodbc_char_set_value},
@@ -810,7 +840,13 @@ static int lodbc_binary_get_data(lua_State *L){
   return 1;
 }
 
+static int lodbc_binary_tostring(lua_State *L){
+  lodbc_binary *val = lodbc_value(L, lodbc_binary);
+  return lodbc_value_tostring_impl(L, val, "binary");
+}
+
 static const struct luaL_Reg lodbc_binary_methods[] = { 
+  {"__tostring", lodbc_binary_tostring},
   {"set_null",   lodbc_binary_set_null},
   {"set_default",lodbc_binary_set_default},
   {"set",        lodbc_binary_set_value},
@@ -989,7 +1025,13 @@ static int lodbc_wchar_get_data(lua_State *L){
   return 1;
 }
 
+static int lodbc_wchar_tostring(lua_State *L){
+  lodbc_wchar *val = lodbc_value(L, lodbc_wchar);
+  return lodbc_value_tostring_impl(L, val, "wchar");
+}
+
 static const struct luaL_Reg lodbc_wchar_methods[] = { 
+  {"__tostring", lodbc_wchar_tostring},
   {"set_null",   lodbc_wchar_set_null},
   {"set_default",lodbc_wchar_set_default},
   {"set",        lodbc_wchar_set_value},

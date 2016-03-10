@@ -1,5 +1,6 @@
 # ODBC library for Lua 5.1/5.2 #
 
+[![Licence](http://img.shields.io/badge/Licence-MIT-brightgreen.svg)](LICENCE.txt)
 [![Build Status](https://travis-ci.org/moteus/lua-odbc.png?branch=master)](https://travis-ci.org/moteus/lua-odbc)
 [![Coverage Status](https://coveralls.io/repos/moteus/lua-odbc/badge.png?branch=master)](https://coveralls.io/r/moteus/lua-odbc?branch=master)
 
@@ -11,6 +12,13 @@
 - catalog functions
 - luasql compatable module
 - C API to create Lua object based on existed ODBC handle
+
+## Known issues ##
+- assert method rise error as object.
+This works fine on Lua > 5.1 and on LuaJIT but on Lua 5.1 it results message as
+`lua.exe: (error object is not a string)`. But it allows wrap code
+in `pcall` function and handle errors as object(with access to SQLCODE and SQLSTATE).
+To change this behavior set `-DLODBC_ASSERT_TOSTRING` flag in compile time.
 
 ## Usage ##
 
