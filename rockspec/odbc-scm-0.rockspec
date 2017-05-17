@@ -1,15 +1,15 @@
 package = "odbc"
 version = "scm-0"
 source = {
-  url = "https://github.com/moteus/lua-odbc/archive/master.zip",
-  dir = "lua-odbc-master",
+  url = "https://github.com/helloj/lua-odbc/archive/dbmaker.zip",
+  dir = "lua-odbc-dbmaker",
 }
 
 description = {
   summary = "ODBC library for Lua",
   detailed = [[
   ]],
-  homepage = "https://github.com/moteus/lua-odbc",
+  homepage = "https://github.com/helloj/lua-odbc",
   license  = "MIT/X11",
 }
 
@@ -19,12 +19,7 @@ dependencies = {
 
 external_dependencies = {
   platforms = { 
-    unix = {
-      ODBC = {
-        header  = 'sql.h',
-        -- library = 'odbc', -- does not work !?
-      }
-    };
+    unix = { ODBC = {} };
     windows = { ODBC = {} };
   }
 }
@@ -41,7 +36,7 @@ build = {
     }},
     unix    = { modules = {
       [ "odbc.core"    ] = {
-        libraries = {'odbc'};
+        libraries = {'dmapic'};
       }
     }},
   },
@@ -57,7 +52,7 @@ build = {
         -- 'src/driverinfo.c',
       };
       defines = {
-        'UNIXODBC';
+        'DBMAKER';
         'LUAODBC_EXPORTS';
 
         -- Configuration behavior
