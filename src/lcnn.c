@@ -282,6 +282,26 @@ static int cnn_reset_handle(lua_State *L) {
   return 1;
 }
 
+static int cnn_tostring (lua_State *L) {
+  char status[16];
+  char self[65];
+
+  lodbc_cnn *cnn = (lodbc_cnn *)lutil_checkudatap (L, 1, LODBC_CNN);
+  luaL_argcheck (L, cnn != NULL, 1, LODBC_PREFIX "connection expected");
+
+  if(cnn->flags & LODBC_FLAG_DESTROYED){
+    strcpy (status, "[closed] ");
+  }
+  else{
+    status[0] = '\0';
+  }
+
+  sprintf (self, "%p", (void *)cnn);
+
+  lua_pushfstring (L, "%s %s(%s)", LODBC_CNN, status, self);
+  return 1;
+}
+
 //{ connect
 
 int lodbc_cnn_init_support(lua_State *L){
@@ -755,7 +775,7 @@ static int cnn_get_uint16_info(lua_State*L){
 static int cnn_get_uint32_info(lua_State*L){
   lodbc_cnn *cnn = lodbc_getcnn (L);
   SQLUSMALLINT optnum = luaL_checkinteger(L,2);
-  return cnn_get_uint16_info_(L, cnn, optnum);
+  return cnn_get_uint32_info_(L, cnn, optnum);
 }
 
 static int cnn_get_str_info(lua_State*L){
@@ -1291,6 +1311,14 @@ DEFINE_GET_STRING_INFO(getExtraNameCharacters,
 DEFINE_GET_STRING_INFO(getSearchStringEscape,
   SQL_SEARCH_PATTERN_ESCAPE
 )
+
+#ifdef SQL_MAX_ASYNC_CONCURRENT_STATEMENTS
+
+DEFINE_GET_UINT32_INFO(getMaxAsyncConcurrentStatements,
+  SQL_MAX_ASYNC_CONCURRENT_STATEMENTS
+)
+
+#endif
 
 static int cnn_getNumericFunctions(lua_State *L){
   static struct {
@@ -2290,6 +2318,8 @@ static int cnn_getcolumns(lua_State *L){
 //}----------------------------------------------------------------------------
 
 static const struct luaL_Reg lodbc_cnn_methods[] = {
+  {"__tostring",    cnn_tostring},
+
   {"__gc",          cnn_destroy},
   {"destroy",       cnn_destroy},
   {"destroyed",     cnn_destroyed},
@@ -2409,6 +2439,9 @@ static const struct luaL_Reg lodbc_cnn_methods[] = {
   {"stringFunctions",                           cnn_getStringFunctions},
   {"systemFunctions",                           cnn_getSystemFunctions},
   {"timeDateFunctions",                         cnn_getTimeDateFunctions},
+#ifdef SQL_MAX_ASYNC_CONCURRENT_STATEMENTS
+  {"maxAsyncConcurrentStatements",              cnn_getMaxAsyncConcurrentStatements },
+#endif
   {"supportsCatalogsInDataManipulation",        cnn_supportsCatalogsInDataManipulation},
   {"supportsCatalogsInProcedureCalls",          cnn_supportsCatalogsInProcedureCalls},
   {"supportsCatalogsInTableDefinitions",        cnn_supportsCatalogsInTableDefinitions},

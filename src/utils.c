@@ -13,11 +13,11 @@ const char
   *LT_INTEGER = "integer";
 
 static const char *LODBC_USER_VALUE = "User value storage";
+/*
 static const int LODBC_NULL_VALUE = -1;
-
-#ifndef LODBC_USE_NULL_AS_NIL
 const int *LODBC_NULL = &LODBC_NULL_VALUE;
-#endif
+*/
+const int *LODBC_NULL = NULL;
 
 void lodbc_stackdump( lua_State* L ) {
   int top= lua_gettop(L);
@@ -55,13 +55,13 @@ void lodbc_stackdump( lua_State* L ) {
 
 int lodbc_is_fail(lua_State *L, int nresult){
   if(nresult == 0)return 0;
-  return (lua_type(L, nresult) == LUA_TNIL);
+  return (lua_type(L, -nresult) == LUA_TNIL);
 }
 
 // no result or error
 int lodbc_is_unknown(lua_State *L, int nresult){
   if(nresult == 0)return 1;
-  return (lua_type(L, nresult) == LUA_TNIL);
+  return (lua_type(L, -nresult) == LUA_TNIL);
 }
 
 /*
@@ -121,7 +121,17 @@ const char *lodbc_sqltypetolua (const SQLSMALLINT type) {
     case SQL_FLOAT: case SQL_REAL: case SQL_DOUBLE:
       return LT_NUMBER;
 
-    case SQL_BIGINT: case SQL_TINYINT: case SQL_INTEGER: case SQL_SMALLINT:
+  case SQL_INTEGER:
+#ifndef LODBC_INT_SIZE_32
+      return LT_NUMBER;
+#endif
+
+  case SQL_BIGINT: 
+#ifndef LODBC_INT_SIZE_64
+      return LT_NUMBER;
+#endif
+
+    case SQL_TINYINT: case SQL_SMALLINT:
       return LT_INTEGER;
 
     case SQL_INTERVAL_MONTH:          case SQL_INTERVAL_YEAR: 
@@ -147,7 +157,6 @@ const char *lodbc_sqltypetolua (const SQLSMALLINT type) {
 
   }
 }
-
 
 int lodbc_push_column_value(lua_State *L, SQLHSTMT hstmt, SQLUSMALLINT i, const char type){
   int top = lua_gettop(L);
@@ -247,7 +256,6 @@ int lodbc_push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt, SQLUSMAL
   lua_pop(L, 1); /* pops type name */
   return lodbc_push_column_value(L,hstmt,i,type);
 }
-
 
 typedef SQLRETURN (SQL_API*get_attr_ptr)(SQLHANDLE, SQLUSMALLINT, SQLPOINTER);
 typedef SQLRETURN (SQL_API*set_attr_ptr)(SQLHANDLE, SQLUSMALLINT, SQLULEN);
@@ -412,7 +420,10 @@ void lodbc_pushnull(lua_State*L){
 }
 
 int lodbc_isnull(lua_State*L, int idx){
-  return (lua_touserdata(L, idx) == LODBC_NULL)?1:0;
+  if(lua_islightuserdata(L, idx)){
+    return lua_touserdata(L, idx) == (void*)LODBC_NULL?1:0;
+  }
+  return 0;
 }
 
 #endif

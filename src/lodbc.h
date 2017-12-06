@@ -58,6 +58,17 @@
 
 #endif
 
+#ifdef LODBC_USE_INTEGER
+#  ifdef LUA_32BITS
+#    define LODBC_INT_SIZE_16
+#    define LODBC_INT_SIZE_32
+#  else
+#    define LODBC_INT_SIZE_16
+#    define LODBC_INT_SIZE_32
+#    define LODBC_INT_SIZE_64
+#  endif
+#endif
+
 #ifndef LODBC_C_NUMBER
 #  if defined LUA_NUMBER_DOUBLE
 #    define LODBC_C_NUMBER SQL_C_DOUBLE
@@ -100,6 +111,7 @@ typedef unsigned char uchar;
 #define LODBC_ASTATE_PARAMDATA       (uchar)2
 #define LODBC_ASTATE_FETCH           (uchar)3
 #define LODBC_ASTATE_NEXTRS          (uchar)4
+#define LODBC_ASTATE_PREPARE         (uchar)5
 
 #ifdef LODBC_USE_LUA_REGISTRY
 #  define LODBC_LUA_REGISTRY LUA_REGISTRYINDEX

@@ -18,6 +18,12 @@ static const int CLOSE_CURSOR_STATES_N = 2;
 
 #define IS_CURSOR_CLOSED(T,H) (lodbc_test_state(T, H, CLOSE_CURSOR_STATES, CLOSE_CURSOR_STATES_N) >= 0)
 
+#define LODBC_RET_ASYNC_PROGRESS(L, stmt, state) {\
+  stmt->aflags = state; \
+  lua_pushliteral(L, "timeout"); \
+  return 1 + lodbc_push_diagnostics(L, hSTMT, stmt->handle); \
+}
+
 //-----------------------------------------------------------------------------
 // declaretions
 //{----------------------------------------------------------------------------
@@ -298,11 +304,19 @@ static int stmt_prepare_ (lua_State *L, lodbc_stmt *stmt, const char *statement)
   if(stmt->flags & LODBC_FLAG_OPENED)
     return lodbc_faildirect(L, "can not prepare opened statement.");
 
-  stmt_clear_info_(L, stmt);
+  if((stmt->aflags != LODBC_ASTATE_NONE) && (stmt->aflags != LODBC_ASTATE_PREPARE))
+    return 0;
 
+  if(stmt->aflags == LODBC_ASTATE_NONE)
+    stmt_clear_info_(L, stmt);
+
+  stmt->aflags = LODBC_ASTATE_NONE;
   ret = SQLPrepare(stmt->handle, (SQLCHAR *) statement, SQL_NTS);
-  if (lodbc_iserror(ret))
+  if (lodbc_iserror(ret)){
+    if(ret == SQL_STILL_EXECUTING)
+      LODBC_RET_ASYNC_PROGRESS(L, stmt, LODBC_ASTATE_PREPARE);
     return lodbc_fail(L, hSTMT, stmt->handle);
+  }
   stmt->flags |= LODBC_FLAG_PREPARED;
 
   /* determine the number of results */
@@ -432,17 +446,15 @@ static int stmt_bind_number_post_(lua_State *L, lodbc_stmt *stmt, SQLUSMALLINT i
 }
 
 static int stmt_bind_number_impl_(lua_State *L, lodbc_stmt *stmt, SQLUSMALLINT i, par_data *par){
-  SQLRETURN ret;
   if(lua_isfunction(L,3))
-    return stmt_bind_number_cb_(L,stmt,i,par);
+    return stmt_bind_number_cb_(L,stmt, i, par);
 
   return stmt_bind_number_post_(L, stmt, i, par);
 }
 
 static int stmt_bind_integer_impl_(lua_State *L, lodbc_stmt *stmt, SQLUSMALLINT i, par_data *par){
-  SQLRETURN ret;
   if(lua_isfunction(L,3))
-    return stmt_bind_integer_cb_(L,stmt,i,par);
+    return stmt_bind_integer_cb_(L, stmt, i, par);
 
   return stmt_bind_number_post_(L, stmt, i, par);
 }
@@ -724,9 +736,7 @@ static int stmt_vfetch (lua_State *L) {
     lua_pushboolean(L,0);
     return 1;
   } else if(rc == SQL_STILL_EXECUTING){
-    lua_pushliteral(L, "timeout");
-    stmt->aflags = LODBC_ASTATE_FETCH;
-    return 1;
+    LODBC_RET_ASYNC_PROGRESS(L, stmt, LODBC_ASTATE_FETCH);
   }else if(lodbc_iserror(rc)) return lodbc_fail(L, hSTMT, hstmt);
 
   lua_pushboolean(L,1);
@@ -1021,9 +1031,7 @@ static int stmt_execute(lua_State *L){
       stmt->resultsetno = 0;
     }
     if(ret == SQL_STILL_EXECUTING){
-      stmt->aflags = LODBC_ASTATE_EXECUTE;
-      lua_pushliteral(L,"timeout");
-      return 1;
+      LODBC_RET_ASYNC_PROGRESS(L, stmt, LODBC_ASTATE_EXECUTE);
     }
 
     if(
@@ -1035,7 +1043,6 @@ static int stmt_execute(lua_State *L){
     }
   }
   else ret = SQL_SUCCESS;
-
 
   if((ret == SQL_NEED_DATA)||(stmt->aflags == LODBC_ASTATE_PARAMDATA)){
     stmt->aflags = LODBC_ASTATE_NONE;
@@ -1051,9 +1058,7 @@ static int stmt_execute(lua_State *L){
       }
     }
     if(ret == SQL_STILL_EXECUTING){
-      stmt->aflags = LODBC_ASTATE_PARAMDATA;
-      lua_pushliteral(L,"timeout");
-      return 1;
+      LODBC_RET_ASYNC_PROGRESS(L, stmt, LODBC_ASTATE_PARAMDATA);
     }
     if(
       (lodbc_iserror(ret))&&
@@ -1156,9 +1161,7 @@ static int stmt_moreresults(lua_State *L){
     return 1;
   }
   if(ret == SQL_STILL_EXECUTING){
-    stmt->aflags = LODBC_ASTATE_NEXTRS;
-    lua_pushliteral(L, "timeout");
-    return 1;
+    LODBC_RET_ASYNC_PROGRESS(L, stmt, LODBC_ASTATE_NEXTRS);
   }
   if(lodbc_iserror(ret)) return lodbc_fail(L, hSTMT, stmt->handle);
 
@@ -1381,7 +1384,29 @@ static int stmt_get_asyncmode(lua_State *L){
 
 //}
 
+static int stmt_tostring (lua_State *L) {
+  char status[16];
+  char self[65];
+
+  lodbc_stmt * stmt= (lodbc_stmt *)lutil_checkudatap (L, 1, LODBC_STMT);
+  luaL_argcheck (L, stmt != NULL, 1, LODBC_PREFIX "statement expected");
+
+  if(stmt->flags & LODBC_FLAG_DESTROYED){
+    strcpy (status, "[closed] ");
+  }
+  else{
+    status[0] = '\0';
+  }
+
+  sprintf (self, "%p", (void *)stmt);
+
+  lua_pushfstring (L, "%s %s(%s)", LODBC_STMT, status, self);
+  return 1;
+}
+
 static const struct luaL_Reg lodbc_stmt_methods[] = {
+  {"__tostring", stmt_tostring},
+
   {"__gc",      stmt_destroy},
   {"destroy",   stmt_destroy},
   {"destroyed", stmt_destroyed},
